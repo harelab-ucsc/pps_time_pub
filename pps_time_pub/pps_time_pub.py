@@ -61,7 +61,7 @@ class PpsTimePub(Node):
             # then throttles to once per watchdog_interval_s regardless of saw_assert.
             last_warn = float("-inf")
             last_edge = time.time()
-            last_pub_wall = 0.0  # wall-clock time of last publish (for debounce)
+            last_pub_mono = 0.0  # monotonic time of last publish (for debounce)
             pub_count = 0
 
             # Minimum wall-clock gap between publishes. The PWM trigger can produce
@@ -97,16 +97,16 @@ class PpsTimePub(Node):
                 # and potential ringing — all within a few ms of each other.
                 # Using wall-clock (not assert_time) is more robust since
                 # clear events share the same assert_time as the preceding assert.
-                if now - last_pub_wall < DEBOUNCE_S:
+                if now - last_pub_mono < DEBOUNCE_S:
                     self.get_logger().debug(
                         f"PPS debounce: dropped edge {edge_time:.6f} "
-                        f"({(now - last_pub_wall)*1000:.1f}ms wall-clock after last)"
+                        f"({(now - last_pub_mono)*1000:.1f}ms wall-clock after last)"
                     )
                     continue
 
                 saw_assert = True
                 last_edge = now
-                last_pub_wall = now
+                last_pub_mono = now
                 last_warn = float("-inf")  # reset so next gap triggers immediately
 
                 t = Time()
