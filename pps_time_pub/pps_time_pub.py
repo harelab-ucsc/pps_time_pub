@@ -81,6 +81,7 @@ class PpsTimePub(Node):
                     continue
 
                 now = time.time()
+                mono = time.monotonic()
 
                 if edge is None:
                     if now - last_warn > self.watchdog_interval:
@@ -93,20 +94,19 @@ class PpsTimePub(Node):
 
                 edge_time = edge["assert_time"]
 
-                # Debounce by wall-clock time: PWM produces assert + clear edges
-                # and potential ringing — all within a few ms of each other.
-                # Using wall-clock (not assert_time) is more robust since
-                # clear events share the same assert_time as the preceding assert.
-                if now - last_pub_mono < DEBOUNCE_S:
+                # Debounce using monotonic time: immune to NTP adjustments and
+                # wall-clock drift. Rejects assert+clear pairs and ringing — all
+                # within a few ms — while passing genuine 5 Hz pulses (200ms apart).
+                if mono - last_pub_mono < DEBOUNCE_S:
                     self.get_logger().debug(
                         f"PPS debounce: dropped edge {edge_time:.6f} "
-                        f"({(now - last_pub_mono)*1000:.1f}ms wall-clock after last)"
+                        f"({(mono - last_pub_mono)*1000:.1f}ms after last)"
                     )
                     continue
 
                 saw_assert = True
                 last_edge = now
-                last_pub_mono = now
+                last_pub_mono = mono
                 last_warn = float("-inf")  # reset so next gap triggers immediately
 
                 t = Time()
