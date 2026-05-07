@@ -61,7 +61,13 @@ class PpsTimePub(Node):
             # then throttles to once per watchdog_interval_s regardless of saw_assert.
             last_warn = float("-inf")
             last_edge = time.time()
+            last_pub_time = 0.0  # assert_time of last published edge (for debounce)
             pub_count = 0
+
+            # Minimum gap between published edges. The PWM trigger signal can ring,
+            # causing 4-6 edges per pulse. 50ms rejects all intra-pulse bounces while
+            # allowing triggers down to ~2 Hz.
+            DEBOUNCE_S = 0.05
 
             while not self.stop_evt.is_set():
                 try:
@@ -84,15 +90,24 @@ class PpsTimePub(Node):
                         last_warn = now
                     continue
 
+                edge_time = edge["assert_time"]
+
+                # Debounce: drop edges that arrive too soon after the last publish
+                if edge_time - last_pub_time < DEBOUNCE_S:
+                    self.get_logger().debug(
+                        f"PPS debounce: dropped edge {edge_time:.6f} "
+                        f"({(edge_time - last_pub_time)*1000:.1f}ms after last)"
+                    )
+                    continue
+
                 saw_assert = True
                 last_edge = now
+                last_pub_time = edge_time
                 last_warn = float("-inf")  # reset so next gap triggers immediately
 
                 t = Time()
-#                self.get_logger().info(f'{edge["assert_time"]}')
-                t.sec = int(edge["assert_time"])
-                t.nanosec = int((edge["assert_time"] - int(edge["assert_time"])) * 1e9)
-#                self.get_logger().info(f"t.sec: {t.sec},     t.nanosec: {t.nanosec}")
+                t.sec = int(edge_time)
+                t.nanosec = int((edge_time - int(edge_time)) * 1e9)
                 self.pub.publish(t)
 
                 pub_count += 1
