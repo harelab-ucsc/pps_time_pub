@@ -61,13 +61,14 @@ class PpsTimePub(Node):
             # then throttles to once per watchdog_interval_s regardless of saw_assert.
             last_warn = float("-inf")
             last_edge = time.time()
-            last_pub_time = 0.0  # assert_time of last published edge (for debounce)
+            last_pub_wall = 0.0  # wall-clock time of last publish (for debounce)
             pub_count = 0
 
-            # Minimum gap between published edges. The PWM trigger signal can ring,
-            # causing 4-6 edges per pulse. 50ms rejects all intra-pulse bounces while
-            # allowing triggers down to ~2 Hz.
-            DEBOUNCE_S = 0.05
+            # Minimum wall-clock gap between publishes. The PWM trigger can produce
+            # both assert and clear edges, plus hardware ringing — all within a few
+            # ms of each other. 150ms safely passes genuine 5 Hz triggers (200ms
+            # apart) and rejects everything else.
+            DEBOUNCE_S = 0.15
 
             while not self.stop_evt.is_set():
                 try:
@@ -92,17 +93,20 @@ class PpsTimePub(Node):
 
                 edge_time = edge["assert_time"]
 
-                # Debounce: drop edges that arrive too soon after the last publish
-                if edge_time - last_pub_time < DEBOUNCE_S:
+                # Debounce by wall-clock time: PWM produces assert + clear edges
+                # and potential ringing — all within a few ms of each other.
+                # Using wall-clock (not assert_time) is more robust since
+                # clear events share the same assert_time as the preceding assert.
+                if now - last_pub_wall < DEBOUNCE_S:
                     self.get_logger().debug(
                         f"PPS debounce: dropped edge {edge_time:.6f} "
-                        f"({(edge_time - last_pub_time)*1000:.1f}ms after last)"
+                        f"({(now - last_pub_wall)*1000:.1f}ms wall-clock after last)"
                     )
                     continue
 
                 saw_assert = True
                 last_edge = now
-                last_pub_time = edge_time
+                last_pub_wall = now
                 last_warn = float("-inf")  # reset so next gap triggers immediately
 
                 t = Time()
