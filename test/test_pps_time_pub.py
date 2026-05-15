@@ -148,6 +148,7 @@ class TestPublishPath:
             if n["i"] < len(edges):
                 edge = edges[n["i"]]
                 n["i"] += 1
+                time.sleep(0.2)  # simulate real 3 Hz spacing so monotonic debounce passes
                 return edge
             time.sleep(0.02)
             return None
