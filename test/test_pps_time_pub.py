@@ -53,6 +53,7 @@ _PPS_TOOLS_PATH = "pps_time_pub.pps_time_pub.pps_tools"
 
 class FakeEdge:
     """Mimics the dict-like edge object returned by pps_tools 3.22 PpsFile.fetch()."""
+
     def __init__(self, sec: int, nsec: int):
         self._assert_time = sec + nsec / 1e9
 
@@ -64,11 +65,12 @@ class FakeEdge:
 
 class _SpyLogger:
     """Captures node log calls — ROS2 logging doesn't route through caplog."""
+
     def __init__(self):
         self.records = []
 
-    def info(self, msg):  self.records.append(('info',  msg))
-    def warn(self, msg):  self.records.append(('warn',  msg))
+    def info(self, msg): self.records.append(('info', msg))
+    def warn(self, msg): self.records.append(('warn', msg))
     def error(self, msg): self.records.append(('error', msg))
     def debug(self, msg): self.records.append(('debug', msg))
     def fatal(self, msg): self.records.append(('fatal', msg))
