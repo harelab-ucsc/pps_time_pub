@@ -51,6 +51,7 @@ _PPS_TOOLS_PATH = "pps_time_pub.pps_time_pub.pps_tools"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 class FakeEdge:
     """Mimics the dict-like edge object returned by pps_tools 3.22 PpsFile.fetch()."""
 
@@ -69,17 +70,26 @@ class _SpyLogger:
     def __init__(self):
         self.records = []
 
-    def info(self, msg): self.records.append(('info', msg))
-    def warn(self, msg): self.records.append(('warn', msg))
-    def error(self, msg): self.records.append(('error', msg))
-    def debug(self, msg): self.records.append(('debug', msg))
-    def fatal(self, msg): self.records.append(('fatal', msg))
+    def info(self, msg):
+        self.records.append(("info", msg))
+
+    def warn(self, msg):
+        self.records.append(("warn", msg))
+
+    def error(self, msg):
+        self.records.append(("error", msg))
+
+    def debug(self, msg):
+        self.records.append(("debug", msg))
+
+    def fatal(self, msg):
+        self.records.append(("fatal", msg))
 
     def any_contains(self, substr):
         return any(substr in msg for _, msg in self.records)
 
     def warn_count(self, substr):
-        return sum(1 for lvl, msg in self.records if lvl == 'warn' and substr in msg)
+        return sum(1 for lvl, msg in self.records if lvl == "warn" and substr in msg)
 
 
 def _make_node(watchdog_interval_s: float = 10.0):
@@ -119,6 +129,7 @@ def _spin_for(node, secs: float):
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module", autouse=True)
 def ros_context():
     rclpy.init()
@@ -139,8 +150,8 @@ def collector():
 # Tests
 # ---------------------------------------------------------------------------
 
-class TestPublishPath:
 
+class TestPublishPath:
     def test_publishes_correct_timestamps(self, collector):
         """Each fake PPS edge must produce a Time message with matching sec/nanosec."""
         edges = [FakeEdge(1_000_000 + i, i * 1_000_000) for i in range(5)]
@@ -150,7 +161,9 @@ class TestPublishPath:
             if n["i"] < len(edges):
                 edge = edges[n["i"]]
                 n["i"] += 1
-                time.sleep(0.2)  # simulate real 3 Hz spacing so monotonic debounce passes
+                time.sleep(
+                    0.2
+                )  # simulate real 3 Hz spacing so monotonic debounce passes
                 return edge
             time.sleep(0.02)
             return None
@@ -178,10 +191,10 @@ class TestPublishPath:
             assert_time = edge["assert_time"]
             expected_sec = int(assert_time)
             expected_nanosec = int((assert_time - expected_sec) * 1e9)
-            assert msg.sec == expected_sec, \
-                f"msg[{i}].sec {msg.sec} != {expected_sec}"
-            assert msg.nanosec == expected_nanosec, \
+            assert msg.sec == expected_sec, f"msg[{i}].sec {msg.sec} != {expected_sec}"
+            assert msg.nanosec == expected_nanosec, (
                 f"msg[{i}].nanosec {msg.nanosec} != {expected_nanosec}"
+            )
 
     def test_ppsfile_opened_with_configured_device(self):
         """PpsFile must be instantiated with the node's pps_device parameter."""
@@ -200,7 +213,6 @@ class TestPublishPath:
 
 
 class TestErrorHandling:
-
     def test_open_failure_exits_cleanly(self):
         """If PpsFile() raises, the thread must exit — not hang."""
         with patch(_PPS_TOOLS_PATH) as mock_pps:
@@ -215,9 +227,9 @@ class TestErrorHandling:
             node.destroy_node()
 
         assert not node.th.is_alive(), "Thread should have exited after open failure"
-        assert spy.any_contains("Failed to open") or spy.any_contains("no such device"), (
-            f"Expected error log. Got: {spy.records}"
-        )
+        assert spy.any_contains("Failed to open") or spy.any_contains(
+            "no such device"
+        ), f"Expected error log. Got: {spy.records}"
 
     def test_no_publish_when_fetch_returns_none(self, collector):
         """When fetch always returns None no messages should be published."""
@@ -269,9 +281,9 @@ class TestErrorHandling:
 
 
 class TestWatchdog:
-
     def test_watchdog_warns_when_no_edges(self):
         """Watchdog must fire within watchdog_interval_s when no edges arrive."""
+
         def slow_none(timeout=None):
             time.sleep(0.05)
             return None
@@ -326,9 +338,9 @@ class TestWatchdog:
 
 
 class TestShutdown:
-
     def test_thread_exits_on_destroy(self):
         """Background thread must finish within 3 s of destroy_node()."""
+
         def slow_fetch(timeout=None):
             time.sleep(0.05)
             return None

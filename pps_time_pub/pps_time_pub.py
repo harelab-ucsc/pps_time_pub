@@ -25,9 +25,7 @@ class PpsTimePub(Node):
 
         self.pps_device = self.get_parameter("pps_device").value
         self.pps_topic = self.get_parameter("pps_topic").value
-        self.watchdog_interval = float(
-            self.get_parameter("watchdog_interval_s").value
-        )
+        self.watchdog_interval = float(self.get_parameter("watchdog_interval_s").value)
 
         if self.pps_topic != "/pps/time":
             self.pub = self.create_publisher(Time, self.pps_topic, 10)
@@ -100,7 +98,7 @@ class PpsTimePub(Node):
                 if mono - last_pub_mono < DEBOUNCE_S:
                     self.get_logger().debug(
                         f"PPS debounce: dropped edge {edge_time:.6f} "
-                        f"({(mono - last_pub_mono)*1000:.1f}ms after last)"
+                        f"({(mono - last_pub_mono) * 1000:.1f}ms after last)"
                     )
                     continue
 
