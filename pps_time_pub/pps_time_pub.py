@@ -68,7 +68,7 @@ class PpsTimePub(Node):
             # apart) and rejects everything else.
             DEBOUNCE_S = 0.15
 
-            while not self.stop_evt.is_set():
+            while not self.stop_evt.is_set() and rclpy.ok():
                 try:
                     # 2-second timeout so we wake up and check stop_evt regularly
                     edge = ppsf.fetch(timeout=2)
@@ -110,8 +110,11 @@ class PpsTimePub(Node):
                 t = Time()
                 t.sec = int(edge_time)
                 t.nanosec = int((edge_time - int(edge_time)) * 1e9)
-                self.pub.publish(t)
-
+                try:
+                    if not self.stop_evt.is_set() and rclpy.ok():
+                        self.pub.publish(t)
+                except Exception:
+                    break
                 pub_count += 1
                 self.get_logger().debug(
                     f"PPS edge #{pub_count}: {t.sec}.{t.nanosec:09d}"
@@ -136,8 +139,8 @@ def main():
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
-
+        if rclpy.ok():
+            rclpy.shutdown()
 
 if __name__ == "__main__":
     main()
